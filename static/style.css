@@ -1,0 +1,248 @@
+/* DARK MODE */
+body.dark{
+  --bg:#0b0f14;
+  --panel:#121826;
+  --accent:#00ff9c;
+  --text:#e6edf3;
+  --muted:#8b949e;
+}
+
+/* LIGHT MODE – ENHANCED */
+body.light{
+  --bg:linear-gradient(180deg,#f4f7fb,#e8edf5);
+  --panel:rgba(255,255,255,0.85);
+  --accent:#2563eb;
+  --text:#0f172a;
+  --muted:#475569;
+}
+
+body{
+  margin:0;
+  font-family:Segoe UI, sans-serif;
+  background:var(--bg);
+  color:var(--text);
+}
+
+/* HEADER */
+header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:20px 26px;
+  border-bottom:2px solid var(--accent);
+  backdrop-filter:blur(10px);
+}
+
+h1{
+  margin:0;
+  color:var(--accent);
+}
+.by{
+  font-size:18px;
+  font-weight:500;
+  color:var(--muted);
+}
+
+.subtitle{
+  margin-top:4px;
+  font-size:14px;
+  color:var(--muted);
+}
+
+.theme-btn{
+  background:var(--panel);
+  border:1px solid var(--accent);
+  border-radius:22px;
+  padding:6px 14px;
+  cursor:pointer;
+}
+
+/* GRID */
+.grid{
+  display:grid;
+  grid-template-columns:280px 1fr 280px;
+  gap:18px;
+  padding:18px;
+}
+
+/* PANELS */
+.panel{
+  background:var(--panel);
+  border-radius:18px;
+  padding:18px;
+  box-shadow:0 15px 35px rgba(0,0,0,0.08);
+}
+
+/* STATUS */
+.status-item,.sensor{
+  display:flex;
+  justify-content:space-between;
+  margin-bottom:10px;
+}
+.ok{color:var(--accent);}
+
+/* CAMERA */
+.video{
+  width:100%;
+  aspect-ratio:16/9;
+  object-fit:cover;
+  border-radius:14px;
+  background:black;
+  border:1px solid var(--accent);
+}
+
+.camera-actions button{
+  margin:6px 6px 0 0;
+  padding:8px 14px;
+  border-radius:12px;
+  background:var(--accent);
+  border:none;
+  color:white;
+  font-weight:bold;
+}
+
+/* GALLERY */
+.gallery{
+  display:none;
+  grid-template-columns:repeat(auto-fill,80px);
+  gap:8px;
+  margin-top:10px;
+}
+.gallery.show{display:grid;}
+.gallery img{
+  width:100%;
+  border-radius:8px;
+  cursor:pointer;
+}
+
+/* MODAL */
+.modal{
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.85);
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+}
+.modal img{
+  max-width:90%;
+  max-height:80%;
+  border-radius:12px;
+}
+.delete-btn{
+  margin-top:12px;
+  padding:8px 16px;
+  border:none;
+  background:#ef4444;
+  color:white;
+  border-radius:10px;
+}
+
+/* CONTROLS */
+.controls-grid{
+  display:grid;
+  grid-template-columns:repeat(3,70px);
+  gap:12px;
+  justify-content:center;
+}
+.controls button{
+  height:70px;
+  border-radius:16px;
+  background:#020617;
+  border:1px solid var(--accent);
+  color:var(--accent);
+  font-size:26px;
+}
+.controls button.active{
+  box-shadow:0 0 18px var(--accent);
+  transform:scale(0.95);
+}
+.stop{background:#7f1d1d;color:white;}
+.control-status{
+  text-align:center;
+  margin-top:16px;
+  color:var(--accent);
+}
+
+/* MOBILE */
+@media(max-width:900px){
+  .grid{grid-template-columns:1fr;}
+}
+/* ===== MOVEMENT ICONS ===== */
+
+.icon{
+  width:26px;
+  height:26px;
+  display:inline-block;
+  position:relative;
+}
+
+/* STRAIGHT ARROWS */
+.icon.up::before{
+  content:"";
+  border-left:8px solid transparent;
+  border-right:8px solid transparent;
+  border-bottom:14px solid var(--accent);
+  position:absolute;
+  top:4px; left:5px;
+}
+.icon.down::before{
+  content:"";
+  border-left:8px solid transparent;
+  border-right:8px solid transparent;
+  border-top:14px solid var(--accent);
+  position:absolute;
+  top:8px; left:5px;
+}
+.icon.left::before{
+  content:"";
+  border-top:8px solid transparent;
+  border-bottom:8px solid transparent;
+  border-right:14px solid var(--accent);
+  position:absolute;
+  top:5px; left:4px;
+}
+.icon.right::before{
+  content:"";
+  border-top:8px solid transparent;
+  border-bottom:8px solid transparent;
+  border-left:14px solid var(--accent);
+  position:absolute;
+  top:5px; left:8px;
+}
+
+/* DIAGONALS */
+.icon.diag::before{
+  content:"";
+  width:14px;
+  height:14px;
+  border-top:3px solid var(--accent);
+  border-right:3px solid var(--accent);
+  position:absolute;
+  top:6px; left:6px;
+}
+.icon.fl{transform:rotate(-135deg);}
+.icon.fr{transform:rotate(-45deg);}
+.icon.bl{transform:rotate(135deg);}
+.icon.br{transform:rotate(45deg);}
+
+/* ROTATION */
+.icon.rot-l::before{
+  content:"⟲";
+  font-size:22px;
+  color:var(--accent);
+}
+.icon.rot-r::before{
+  content:"⟳";
+  font-size:22px;
+  color:var(--accent);
+}
+
+/* STOP */
+.icon.stop{
+  width:14px;
+  height:14px;
+  background:var(--accent);
+  border-radius:3px;
+}
