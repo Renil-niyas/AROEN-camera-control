@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AROEN – by Renil Niyas</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AROEN – Telemetry</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 
 <body class="dark">
@@ -12,160 +12,164 @@
 <header>
   <div class="title-block">
     <h1>AROEN <span class="by">– by Renil Niyas</span></h1>
-    <p class="subtitle">Autonomous Robot for Odour & Emission Navigation</p>
+    <p class="subtitle">
+      Autonomous Robot for Odour & Emission Navigation
+    </p>
   </div>
+
   <button id="themeToggle" class="theme-btn">☀ / 🌙</button>
 </header>
 
 <main class="grid">
 
-<!-- SYSTEM STATUS -->
+<!-- LEFT PANEL -->
 <section class="panel status">
-  <h2>System Status</h2>
 
-  <div class="status-item"><span>Network</span><span class="ok">CONNECTED</span></div>
-  <div class="status-item"><span>Camera</span><span class="ok">ACTIVE</span></div>
-  <div class="status-item"><span>Pi CPU Temperature</span><span class="ok" id="pi_temp">--</span></div>
+<h2>System Status</h2>
+<div class="sensor"><span>Mode</span><strong id="mode">--</strong></div>
+<div class="sensor"><span>Status</span>
+<strong id="finalStatus">NORMAL</strong></div>
 
-  <h2>Sensors</h2>
-  <div class="sensor"><span>Gas Sensor 1</span><strong id="gas1">--</strong></div>
-  <div class="sensor"><span>Gas Sensor 2</span><strong id="gas2">--</strong></div>
+<hr>
+
+<h2>Air Quality</h2>
+<div class="sensor"><span>IAQ</span><strong id="iaq">--</strong></div>
+<div class="sensor"><span>eCO2</span><strong id="eco2">-- ppm</strong></div>
+<div class="sensor"><span>Temp</span><strong id="temp">-- °C</strong></div>
+<div class="sensor"><span>Humidity</span><strong id="hum">-- %</strong></div>
+
+<hr>
+
+<h2>Orientation</h2>
+<div class="sensor"><span>Roll</span><strong id="roll">--°</strong></div>
+<div class="sensor"><span>Pitch</span><strong id="pitch">--°</strong></div>
+
+<div class="orientation-box">
+  <div class="cube" id="cube">
+    <div class="face front"></div>
+    <div class="face back"></div>
+    <div class="face left"></div>
+    <div class="face right"></div>
+    <div class="face top"></div>
+    <div class="face bottom"></div>
+  </div>
+</div>
+
+<hr>
+
+<button onclick="toggleThreshold()" class="threshold-btn">
+Set Threshold
+</button>
+
+<div id="thresholdContainer" style="display:none;">
+<input type="range" id="thresholdSlider"
+       min="10" max="100" value="40">
+<div style="text-align:center;">
+Threshold: <strong id="thresholdValue">40</strong> %
+</div>
+</div>
+
 </section>
 
 <!-- CAMERA -->
 <section class="panel camera">
-  <h2>Live Camera Feed</h2>
-
-  <img src="/video" class="video" id="liveFeed">
-
-  <div class="camera-actions">
-    <button onclick="captureImage()">📸 Capture</button>
-    <button onclick="toggleGallery()">📁 Gallery</button>
-  </div>
-
-  <div class="gallery" id="gallery"></div>
+<h2>Live Camera</h2>
+<img src="/video" class="video">
 </section>
 
 <!-- MOVEMENT -->
 <section class="panel controls">
-  <h2>Movement</h2>
+<h2>Movement</h2>
 
-  <div class="controls-grid">
-    <button data-cmd="FL">↖</button>
-    <button data-cmd="FWD">▲</button>
-    <button data-cmd="FR">↗</button>
+<div class="controls-grid">
+<button data-cmd="FL">↖</button>
+<button data-cmd="FWD">▲</button>
+<button data-cmd="FR">↗</button>
 
-    <button data-cmd="LEFT">◀</button>
-    <button class="stop" data-cmd="STOP">■</button>
-    <button data-cmd="RIGHT">▶</button>
+<button data-cmd="LEFT">◀</button>
+<button class="stop" data-cmd="STOP">■</button>
+<button data-cmd="RIGHT">▶</button>
 
-    <button data-cmd="BL">↙</button>
-    <button data-cmd="BACK">▼</button>
-    <button data-cmd="BR">↘</button>
-  </div>
+<button data-cmd="BL">↙</button>
+<button data-cmd="BACK">▼</button>
+<button data-cmd="BR">↘</button>
+</div>
 
-  <div style="display:flex;gap:12px;justify-content:center;margin-top:12px">
-    <button data-cmd="ROT_L">⟲</button>
-    <button data-cmd="ROT_R">⟳</button>
-  </div>
+<div style="display:flex;gap:12px;justify-content:center;margin-top:12px">
+<button data-cmd="ROT_L">⟲</button>
+<button data-cmd="ROT_R">⟳</button>
+</div>
 
-  <p class="control-status" id="moveStatus">● READY</p>
+<p class="control-status">● READY</p>
 </section>
 
 </main>
 
-<!-- IMAGE MODAL -->
-<div id="imageModal" class="modal">
-  <img id="modalImg">
-  <button class="delete-btn" onclick="deleteImage()">🗑 Delete</button>
-</div>
-
 <script>
-/* ---------------- THEME ---------------- */
+
+/* ===== THEME TOGGLE ===== */
 document.getElementById("themeToggle").onclick = () => {
   document.body.classList.toggle("light");
   document.body.classList.toggle("dark");
 };
 
-/* ---------------- SENSOR UPDATE ---------------- */
-setInterval(() => {
-  fetch("/sensors").then(r => r.json()).then(d => {
-    gas1.textContent = d.gas1 + " ppm";
-    gas2.textContent = d.gas2 + " ppm";
-    pi_temp.textContent = d.pi_temp
-      ? d.pi_temp.toFixed(1) + " °C"
-      : "--";
-  });
-}, 1000);
+const cube = document.getElementById("cube");
+const moveStatus = document.querySelector(".control-status");
 
-/* ---------------- MOVEMENT ---------------- */
-const moveStatus = document.getElementById("moveStatus");
+/* ===== SENSOR UPDATE ===== */
+setInterval(()=>{
+ fetch("/sensors")
+ .then(r=>r.json())
+ .then(d=>{
 
+  if(d.calibrating){
+    mode.textContent="CALIBRATING ("+d.remaining+"s)";
+  } else {
+    mode.textContent="NORMAL MODE";
+  }
+
+  iaq.textContent=d.iaq;
+  eco2.textContent=d.eco2+" ppm";
+  temp.textContent=d.temp+" °C";
+  hum.textContent=d.hum+" %";
+
+  roll.textContent=d.roll.toFixed(1)+"°";
+  pitch.textContent=d.pitch.toFixed(1)+"°";
+
+  cube.style.transform =
+    `rotateX(${d.pitch}deg) rotateY(${d.roll}deg)`;
+
+  finalStatus.textContent=d.status;
+  finalStatus.style.color =
+    d.status==="HIGH" ? "#ef4444" : "var(--accent)";
+ });
+},500);
+
+/* ===== THRESHOLD ===== */
+function toggleThreshold(){
+ thresholdContainer.style.display=
+ thresholdContainer.style.display==="none"?"block":"none";
+}
+
+thresholdSlider.onchange=()=>{
+ thresholdValue.textContent=thresholdSlider.value;
+ fetch("/set_threshold/"+thresholdSlider.value);
+};
+
+/* ===== MOVEMENT ===== */
 document.querySelectorAll("[data-cmd]").forEach(btn => {
+
   btn.onmousedown = () => {
-    btn.classList.add("active");
-    sendCmd(btn.dataset.cmd);
+    fetch("/move/" + btn.dataset.cmd);
     moveStatus.textContent = "● " + btn.dataset.cmd;
   };
 
   btn.onmouseup = btn.onmouseleave = () => {
-    btn.classList.remove("active");
-    sendCmd("STOP");
+    fetch("/move/STOP");
     moveStatus.textContent = "● READY";
   };
 });
 
-function sendCmd(cmd){
-  fetch("/move/" + cmd);
-}
-
-/* ---------------- GALLERY + CAPTURE ---------------- */
-const gallery = document.getElementById("gallery");
-const modal = document.getElementById("imageModal");
-const modalImg = document.getElementById("modalImg");
-let currentImage = "";
-
-function captureImage() {
-  fetch("/capture").then(() => loadGallery());
-}
-
-function toggleGallery() {
-  gallery.classList.toggle("show");
-  if (gallery.classList.contains("show")) loadGallery();
-}
-
-function loadGallery() {
-  fetch("/images").then(r => r.json()).then(data => {
-    gallery.innerHTML = "";
-    data.files.forEach(src => {
-      const img = document.createElement("img");
-      img.src = src;
-      img.onclick = () => openModal(src);
-      gallery.appendChild(img);
-    });
-  });
-}
-
-function openModal(src) {
-  currentImage = src;
-  modalImg.src = src;
-  modal.style.display = "flex";
-}
-
-function deleteImage() {
-  fetch("/delete", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ path: currentImage })
-  }).then(() => {
-    modal.style.display = "none";
-    loadGallery();
-  });
-}
-
-modal.onclick = e => {
-  if (e.target === modal) modal.style.display = "none";
-};
 </script>
 
 </body>

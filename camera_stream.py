@@ -1,6 +1,7 @@
 from flask import Flask, render_template, Response, jsonify, request
 from picamera2 import Picamera2
-import cv2, time, os, libcamera, random, subprocess, os, fcntl
+import cv2, time, os, libcamera
+import serial, threading
 
 app = Flask(__name__)
 
@@ -20,44 +21,58 @@ time.sleep(1)
 def gen_frames():
     while True:
         frame = picam2.capture_array()
+        ret, buffer = cv2.imencode(".jpg", frame)
+        yield (b"--frame\r\n"
+               b"Content-Type: image/jpeg\r\n\r\n" +
+               buffer.tobytes() + b"\r\n")
 
-        # SAFETY: handle 4-channel frames if libcamera changes
-        if frame.ndim == 3 and frame.shape[2] == 4:
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGRA2BGR)
+# ================== UART ==================
+ser = serial.Serial("/dev/serial0", 115200, timeout=1)
 
-        ret, buffer = cv2.imencode(
-            ".jpg", frame,
-            [int(cv2.IMWRITE_JPEG_QUALITY), 85]
-        )
-        if not ret:
-            continue
+sensor_data = {
+    "iaq": 0,
+    "eco2": 0,
+    "temp": 0,
+    "hum": 0,
+    "roll": 0,
+    "pitch": 0,
+    "status": "NORMAL",
+    "calibrating": True,
+    "remaining": 0
+}
 
-        yield (
-            b"--frame\r\n"
-            b"Content-Type: image/jpeg\r\n\r\n" +
-            buffer.tobytes() + b"\r\n"
-        )
-        time.sleep(0.05)
+def uart_reader():
+    global sensor_data
+    while True:
+        try:
+            line = ser.readline().decode().strip()
+            if not line:
+                continue
 
-# ================== UART (RAW, SHELL-LIKE) ==================
-UART_DEV = "/dev/serial0"
+            parts = line.split(",")
 
-def uart_send(cmd):
-    try:
-        with open(UART_DEV, "wb", buffering=0) as f:
-            f.write((cmd + "\n").encode())
-    except Exception as e:
-        print("UART error:", e)
+            # CALIBRATION MODE
+            if parts[0] == "CAL":
+                sensor_data["calibrating"] = True
+                sensor_data["remaining"] = parts[1]
+                sensor_data["temp"] = float(parts[2])
+                sensor_data["hum"] = float(parts[3])
 
-# ================== PI TEMP ==================
-def get_pi_temp():
-    try:
-        out = subprocess.check_output(
-            ["vcgencmd", "measure_temp"]
-        ).decode()
-        return float(out.split("=")[1].replace("'C", ""))
-    except:
-        return None
+            # NORMAL MODE (8 values now)
+            elif len(parts) == 8:
+                sensor_data["calibrating"] = False
+                sensor_data["iaq"] = int(parts[1])
+                sensor_data["eco2"] = int(parts[2])
+                sensor_data["temp"] = float(parts[3])
+                sensor_data["hum"] = float(parts[4])
+                sensor_data["roll"] = float(parts[5])
+                sensor_data["pitch"] = float(parts[6])
+                sensor_data["status"] = parts[7]
+
+        except:
+            pass
+
+threading.Thread(target=uart_reader, daemon=True).start()
 
 # ================== ROUTES ==================
 @app.route("/")
@@ -66,48 +81,22 @@ def index():
 
 @app.route("/video")
 def video():
-    return Response(
-        gen_frames(),
-        mimetype="multipart/x-mixed-replace; boundary=frame"
-    )
-
-@app.route("/move/<cmd>")
-def move(cmd):
-    uart_send(cmd)
-    return jsonify(status="ok", cmd=cmd)
-
-@app.route("/capture")
-def capture():
-    frame = picam2.capture_array()
-    name = f"img_{int(time.time())}.jpg"
-    path = os.path.join(CAPTURE_DIR, name)
-    cv2.imwrite(path, frame)
-    return jsonify(status="ok", file=f"/static/captures/{name}")
-
-@app.route("/images")
-def images():
-    files = sorted(os.listdir(CAPTURE_DIR), reverse=True)
-    return jsonify(files=[f"/static/captures/{f}" for f in files])
-
-@app.route("/delete", methods=["POST"])
-def delete_image():
-    path = request.json.get("path", "")
-    real = path.replace("/static/", "static/")
-    if os.path.exists(real):
-        os.remove(real)
-        return jsonify(status="ok")
-    return jsonify(status="error")
+    return Response(gen_frames(),
+                    mimetype="multipart/x-mixed-replace; boundary=frame")
 
 @app.route("/sensors")
 def sensors():
-    return jsonify({
-        "gas1": random.randint(180, 300),
-        "gas2": random.randint(150, 280),
-        "temp": random.randint(27, 35),
-        "hum": random.randint(45, 70),
-        "pi_temp": get_pi_temp()
-    })
+    return jsonify(sensor_data)
 
-# ================== MAIN ==================
+@app.route("/move/<cmd>")
+def move(cmd):
+    ser.write((cmd + "\n").encode())
+    return jsonify(status="ok")
+
+@app.route("/set_threshold/<value>")
+def set_threshold(value):
+    ser.write(f"THR:{value}\n".encode())
+    return jsonify(status="ok")
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, threaded=True)
